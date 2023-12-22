@@ -1,0 +1,6 @@
+(library
+ (name lambda_hash)
+ (flags -rectypes)
+ (inline_tests)
+ (libraries unix)
+ (preprocess (pps ppx_deriving.map ppx_deriving.fold ppx_inline_test)))
