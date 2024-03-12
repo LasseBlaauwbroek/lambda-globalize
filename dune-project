@@ -10,4 +10,14 @@
  (authors "Lasse Blaauwbroek")
  (homepage https://github.com/LasseBlaauwbroek/lambda-globalize)
  (bug_reports https://github.com/LasseBlaauwbroek/lambda-globalize/issues)
- (depends ocaml ppx_deriving ppx_inline_test))
+ (depends
+   ocaml
+   ppx_deriving
+   ppx_inline_test
+   hashcons
+   fix
+   containers
+   domainslib
+   zarith
+   progress
+   mlgmpidl))

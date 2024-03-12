@@ -1,6 +1,68 @@
 (library
  (name lambda_hash)
  (flags -rectypes)
+ (modules lambda lambdahash tests lambdacount generate valmari)
  (inline_tests)
- (libraries unix)
- (preprocess (pps ppx_deriving.map ppx_deriving.fold ppx_inline_test)))
+ (libraries unix hashcons zarith gmp progress domainslib containers fix)
+ (preprocess (pps ppx_deriving.map ppx_deriving.fold ppx_deriving.eq ppx_inline_test)))
+
+(executable
+ (name gen_terms)
+ (flags -rectypes)
+ (libraries lambda_hash)
+ (modules gen_terms))
+
+(executable
+ (name benchmark_linear)
+ (flags -rectypes)
+ (libraries lambda_hash)
+ (modules benchmark_linear))
+
+(executable
+ (name benchmark_random)
+ (flags -rectypes)
+ (libraries lambda_hash)
+ (modules benchmark_random))
+
+(executable
+ (name benchmark_balanced)
+ (flags -rectypes)
+ (libraries lambda_hash)
+ (modules benchmark_balanced))
+
+(rule
+ (target terms.bin)
+ (deps gen_terms.exe)
+ (action
+  (run ./gen_terms.exe -size %{env:SIZE=9} -o %{target})))
+
+(rule
+ (targets linear_efficient.tsv linear_naive.tsv)
+ (deps benchmark_linear.exe)
+ (action
+  (run ./benchmark_linear.exe -s  %{env:SIZE=9} -o1 linear_efficient.tsv -o2 linear_naive.tsv)))
+
+(rule
+ (targets balanced_efficient.tsv balanced_naive.tsv)
+ (deps benchmark_balanced.exe)
+ (action
+  (run ./benchmark_balanced.exe -s  %{env:SIZE=9} -o1 balanced_efficient.tsv -o2 balanced_naive.tsv)))
+
+(rule
+ (targets random_efficient.tsv random_naive.tsv random_valmari.tsv)
+ (deps terms.bin benchmark_random.exe)
+ (action
+  (run ./benchmark_random.exe -in terms.bin -o1 random_efficient.tsv -o2 random_naive.tsv -o3 random_valmari.tsv)))
+
+(rule
+ (targets benchmark.pdf benchmark.log benchmark.aux)
+ (deps benchmark.tex
+       linear_naive.tsv linear_efficient.tsv
+       balanced_naive.tsv balanced_efficient.tsv
+       random_naive.tsv random_efficient.tsv
+       random_valmari.tsv
+ )
+ (action
+  (progn
+   (run pdflatex benchmark.tex)
+   (run pdflatex benchmark.tex))))

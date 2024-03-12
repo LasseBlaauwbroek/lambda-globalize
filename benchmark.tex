@@ -1,0 +1,81 @@
+\documentclass[crop,tikz]{standalone}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{pgfplots.colorbrewer}
+\usepgfplotslibrary{groupplots}
+\begin{document}
+\begin{tikzpicture}
+  \begin{groupplot}[
+    group style={
+      % set how the plots should be organized
+      group size=1 by 2,
+      % only show ticklabels and axis labels on the bottom
+      x descriptions at=edge bottom,
+      % set the `vertical sep' to zero
+      vertical sep=5pt,
+    },
+    xmode=log,
+    log basis x={2},
+    ymajorgrids,
+    xmajorgrids,
+    xmin=16,
+    legend pos = south east,
+    xlabel={term size},
+    ylabel={globalization time (s)},
+    legend cell align={left},
+    xmax = 8192,
+    ]
+  % \begin{axis}[
+  %   ymode=log,
+  %   log basis y={2},
+  %   xmode=log,
+  %   log basis x={2},
+  %   ymajorgrids,
+  %   xmajorgrids,
+  %   xmin=16,
+  %   legend pos = south east,
+  %   xlabel={term size},
+  %   ylabel={globalization time (s)},
+  %   legend cell align={left},
+  %   xmax = 8192,
+  %   ]
+    \nextgroupplot[
+    ymode=log,
+    log basis y={2},
+    ]
+    \addlegendimage{white, mark=none}
+    \addlegendentry{\underline{Algorithm}}
+    \addlegendimage{black, dashed, mark=none}
+    \addlegendentry{Naive}
+    \addlegendimage{black, mark=none}
+    \addlegendentry{Efficient}
+    \addplot+[Dark2-A, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {linear_efficient.tsv};
+    \label{plot:linear}
+    \addplot+[Dark2-A, mark = o, mark size=0.5pt, dashed] table [x=x, y=q2, col sep=tab] {linear_naive.tsv};
+    \addplot+[Dark2-B, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_efficient.tsv};
+    \label{plot:random}
+    \addplot+[Dark2-B, mark = o, mark size=0.5pt, dashed] table [x=x, y=q2, col sep=tab] {random_naive.tsv};
+    \addplot+[Dark2-C, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {balanced_efficient.tsv};
+    \label{plot:balanced}
+    \addplot+[Dark2-C, mark = o, mark size=0.5pt, dashed] table [x=x, y=q2, col sep=tab] {balanced_naive.tsv};
+
+    \addplot+[domain=1:4096, dotted, black, mark = .] {0.00000002 * x^2} node[above] {$n^2$};
+    \addplot+[domain=1:4096, dotted, black, mark = .] {0.00000006 * x * ln(x)/ln(2)} node[above] {$n\log n$};
+    \addplot+[domain=1:4096, dotted, black, mark = .] {0.00000003 * x} node [above] {$n$};
+
+    \addplot+[Dark2-A, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_valmari.tsv};
+    \node [draw,fill=white] at (rel axis cs: 0.21,0.82) {\shortstack[l]{
+        \quad\quad \underline{Term type} \\
+        \ref{plot:balanced} Balanced \\
+        \ref{plot:random} Random \\
+        \ref{plot:linear} Linear}};
+
+    \nextgroupplot[
+    ymode=log,
+    log basis y={2},
+    ]
+    \addplot+[Dark2-A, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_valmari.tsv};
+    \addplot+[Dark2-B, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_efficient.tsv};
+  \end{groupplot}
+\end{tikzpicture}
+\end{document}

@@ -1,34 +1,15 @@
-open Helpers
+open Lambda
 
-(** Definitions of basic terms, indexing and pretty printing *)
-
-type 'a termf = Lam  of 'a
-              | Var  of int
-              | App  of 'a * 'a [@@deriving map, fold]
-type pure_term = pure_term termf
-
-type pos = Down | Left | Right
-
-let pr_termf pos pr =
-  let parens t = "(" ^ t ^ ")" in
-  function
-  | Lam x ->
-    let step = "λ " ^ pr Down x in
-    (match pos with
-     | Down -> step
-     | Left | Right -> parens step)
-  | App (x, y) ->
-    let step = pr Left x ^ " " ^ pr Right y in
-    (match pos with
-     | Down | Left -> step
-     | Right -> parens step)
-  | Var i -> string_of_int i
+module IntSet = Set.Make(Int)
+module IntMap = Map.Make(Int)
 
 (** Abstract specifications for hashes and decorated lambda terms *)
 
 module type AbstractHash = sig
 type hash
 val pr_hash   : hash -> string
+val eq_hash   : hash -> hash -> bool
+
 val lift_hash : hash termf -> hash
 val hash_gvar : hash -> hash
 end
@@ -65,8 +46,8 @@ val gclosed : term -> bool
 
 val size : term -> int
 (** Contract:
-    [size t < size (lift (Lam t))]
-    [size t + size u < size (lift (App (t, u)))]
+    [not gclosed t -> size t < size (lift (Lam t))]
+    [(if gclosed t then 0 else size t) + (if gclosed u then 0 else size u) < size (lift (App (t, u)))]
 
     Additionally, we must have that if two term nodes are context-sensitive
     alpha-equivalent, they have the same size.
@@ -119,14 +100,10 @@ let rec set_hash (n : int) (h : hash) (t : term) : term =
 
 (** We cannot implement hashes as a list. That would be too slow. Instead, we
     implement it using a map. *)
-type hashes =
-  { map  : hash IntMap.t
-  ; size : int }
-let empty_hashes = { map = IntMap.empty; size = 0 }
-let push_hash { map; size } t =
-  { map = IntMap.add size t map
-  ; size = size + 1 }
-let find_subst { map; size } i = IntMap.find_opt (size - i - 1) map
+type hashes = hash debruijn_map
+let empty_hashes = empty_debruijn
+let push_hash = push_debruijn
+let find_subst = find_debruijn
 let rec set_hashes (s : hashes) (t : term) : term =
   if gclosed t then t else
     match case t with
@@ -148,18 +125,35 @@ let rec globalize (t : term) : term =
 
 end
 
+module Heap (L : AbstractLambda) = struct
+  open L
+
+  include Containers.Heap.Make(struct type t = term let leq t1 t2 = size t1 >= size t2 end)
+
+  let pop_multiple queue =
+    Fun.flip Option.map (find_min queue) @@ fun t ->
+    let prio = L.size t in
+    let rec aux acc queue =
+      match take queue with
+      | Some (queue, t) when prio = L.size t ->
+        aux (t::acc) queue
+      | _ -> prio, acc, queue in
+    aux [] queue
+end
+
 (** An efficient O(n log n) globalization algorithm. *)
 module EfficientGlobalize1 (L : AbstractLambda) = struct
 include L include BasicOperations(L)
+module Heap = Heap(L)
 
 let calc_duplicates (t : term) : IntSet.t =
-  let step q t = if gclosed t then q else PrioQueue.insert q (size t) t in
+  let step q t = if gclosed t then q else Heap.insert t q in
   let rec aux queue =
-    match PrioQueue.pop_multiple queue with
+    match Heap.pop_multiple queue with
     | None -> IntSet.empty
     | Some (_,  [t], queue) -> aux (fold_termf step queue (case t))
     | Some (size, _, queue) -> IntSet.add size (aux queue)
-  in aux (PrioQueue.singleton (size t) t)
+  in aux (Heap.insert t Heap.empty)
 
 let rec globalize (r : term) : term =
   let duplicates = calc_duplicates r in
@@ -187,22 +181,23 @@ end
 *)
 module EfficientGlobalize2 (L : AbstractLambda) = struct
 include L include BasicOperations(L)
+module Heap = Heap(L)
 
 (** [fill_lambda t queue] will insert all subterms of [t] in the [queue] that
     are lambdas, and do not have a lambda as a parent. *)
 let rec fill_lambda t queue =
   let step queue t = if gclosed t then queue else match case t with
-      | Lam _ -> PrioQueue.insert queue (size t) t
+      | Lam _ -> Heap.insert t queue
       | _ -> fill_lambda t queue in
   fold_termf step queue (case t)
 
 let calc_duplicates (t : term) : IntSet.t =
   let rec aux queue =
-    match PrioQueue.pop_multiple queue with
+    match Heap.pop_multiple queue with
     | None -> IntSet.empty
     | Some (size,  [t], queue) -> aux (fill_lambda t queue)
     | Some (size, _, queue) -> IntSet.add size (aux queue)
-  in aux (fill_lambda t PrioQueue.empty)
+  in aux (fill_lambda t Heap.empty)
 
 let rec globalize (r : term) : term =
   let duplicates = calc_duplicates r in
@@ -222,12 +217,15 @@ let rec globalize (r : term) : term =
 
 end
 
+type ('a, 'b) gtermf = Term of 'a | GVar of 'b [@@deriving map, eq]
+
 (** An implementation of the hash structure as g-terms. *)
 module GTerm: AbstractHash = struct
-type hash = Term of hash termf | GVar of hash
+type hash = (hash termf, hash) gtermf
 let lift_hash h = Term h
 let hash_gvar h = GVar h
 
+let eq_hash = (=)
 let pr_hash t =
   let rec aux parens = function
     | GVar h -> "g(" ^ aux Down h ^ ")"
@@ -237,36 +235,140 @@ end
 
 (** An implementation of the hash structure as a digest that is more efficient
     to compare than g-terms. *)
-module GDigest: AbstractHash = struct
+module GDigest: AbstractHash with type hash = string = struct
 type hash = string
 let lift_hash h = Digest.string (pr_termf Right (fun _ h -> h) h)
 let hash_gvar h = Digest.string ("g(" ^ h ^ ")")
+let eq_hash = (=)
 let pr_hash t = t
 end
 
-(** The actual implementation of decorated lambda terms. *)
-module LambdaImplementation(H: AbstractHash): AbstractLambda = struct
-include H
-
-(** Every node caches the hash of the term, the size, and how what the largest
-    free variable in the term is. *)
-type term = { term : term termf
-            ; hash : hash
-            ; size : int
-            ; free : int }
-
-let hash { hash; _ } = hash
-let size { size; _ } = size
-let lift term =
-  let free = match term with
-    | Var i -> i
-    | _     -> fold_termf (fun m { free; _ } -> max m free) (-1) term in
-  let size = fold_termf (fun m { size; _ } -> m + size) 1 term in
-  { term; size; free
-  ; hash = lift_hash (map_termf hash term) }
-let case { term; _ } = term
-let gvar h i = { term = Var i; hash = hash_gvar h; size = 1; free = -1 }
-let gclosed { free; _ } = free < 0
-
+module GInt: AbstractHash with type hash = int = struct
+type hash = int
+let lift_hash h =
+  Hashtbl.hash (Term h)
+let hash_gvar h = Hashtbl.hash (GVar h)
+let eq_hash = (=)
+let pr_hash t = string_of_int t
 end
 
+(** An implementation of the hash structure as g-terms with perfect sharing
+    obtained through the hashcons library. With this implementation, g-terms can
+    be compared in constant time using (==), without the risk of collisions. In
+    a sense, this is the best of both worlds between the previous two
+    implementations. Benchmarks show that the overhead of hash-consing is
+    significant though. Use with caution. *)
+
+type hashcons_gterm = (hashcons_gterm termf, hashcons_gterm) gtermf Hashcons.hash_consed
+module GTermConsed: AbstractHash with type hash = hashcons_gterm = struct
+  open Hashcons
+
+  type hash = hashcons_gterm
+
+  module H = Make(struct
+    type t = (hash termf, hash) gtermf
+    let equal = equal_gtermf (equal_termf (==)) (==)
+    let hash t =
+      let h t = t.hkey in
+      Hashtbl.hash (map_gtermf (map_termf h) h t)
+  end)
+
+  let ht = H.create 10000000
+  let lift_hash h = H.hashcons ht (Term h)
+  let hash_gvar h = H.hashcons ht (GVar h)
+
+  let eq_hash = (==)
+  let pr_hash h =
+    let rec aux parens { node; _ } =
+      match node with
+      | GVar h -> "g(" ^ aux Down h ^ ")"
+      | Term t -> pr_termf parens aux t in
+    aux Down h
+end
+
+type 'a decorated_hash =
+  { hash : 'a
+  ; size : int
+  ; free : int }
+
+let decorated_hash { hash; _ } = hash
+let decorate_size { size; _ }  = size
+let decorated_closed { free; _ } = free < 0
+
+
+module type HashWithSizeModifier = sig
+  include AbstractHash
+  val modify_size : hash decorated_hash -> int
+  val gvar_size   : hash decorated_hash -> int
+end
+
+module ClosedZeroSizeModifier(H : AbstractHash) :
+  HashWithSizeModifier with type hash = H.hash = struct
+  include H
+  let modify_size h = if decorated_closed h then 0 else decorate_size h
+  let gvar_size _ = 0
+end
+module LambdaSizeModifier(H : AbstractHash) :
+  HashWithSizeModifier with type hash = H.hash = struct
+  include H
+  let modify_size = decorate_size
+  let gvar_size _ = 0
+end
+module GTermSizeModifier(H : AbstractHash) :
+  HashWithSizeModifier with type hash = H.hash = struct
+  include H
+  let modify_size = decorate_size
+  let gvar_size = modify_size
+end
+module IntHashSizeModifier(H : AbstractHash with type hash = hashcons_gterm) :
+  HashWithSizeModifier with type hash = H.hash = struct
+  include H
+  let modify_size h =
+    if decorated_closed h then
+      (* Truncate the hash to 32 bits *)
+      Int.logand Hashcons.((decorated_hash h).hkey) 4294967295
+    else
+      decorate_size h
+  let gvar_size = modify_size
+end
+module StringHashSizeModifier(H : AbstractHash with type hash = string) :
+  HashWithSizeModifier with type hash = H.hash = struct
+  include H
+  let modify_size h =
+    if decorated_closed h then
+      (* Truncate the hash to 32 bits *)
+      Int32.to_int (String.get_int32_ne (decorated_hash h) 0)
+    else
+      decorate_size h
+  let gvar_size = modify_size
+end
+
+(** The actual implementation of decorated lambda terms. *)
+module LambdaImplementation(H : HashWithSizeModifier): AbstractLambda with type hash = H.hash decorated_hash = struct
+
+type hash = H.hash decorated_hash
+
+let pr_hash { hash; _ } = H.pr_hash hash
+let eq_hash h1 h2 = H.eq_hash h1.hash h2.hash
+let lift_hash ht =
+  { hash = H.lift_hash (map_termf decorated_hash ht)
+  ; free = (match ht with
+        | Var i -> i
+        | Lam { free; _ } -> free - 1
+        | _     -> fold_termf (fun m { free; _ } -> max m free) (-1) ht)
+  ; size = fold_termf (fun m h -> m + H.modify_size h) 1 ht }
+let hash_gvar h = { hash = H.hash_gvar (decorated_hash h); size = 1 + H.gvar_size h; free = -1 }
+
+type term = { term : term termf
+            ; hash : hash }
+
+let hash { hash; _ } = hash
+let size { hash; _ } = decorate_size hash
+let lift term =
+  { term
+  ; hash = lift_hash (map_termf hash term) }
+let case { term; _ } = term
+let gvar h i = { term = Var i; hash = hash_gvar h }
+let gclosed { hash; _ } = decorated_closed hash
+
+end

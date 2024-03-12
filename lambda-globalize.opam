@@ -11,6 +11,13 @@ depends: [
   "ocaml"
   "ppx_deriving"
   "ppx_inline_test"
+  "hashcons"
+  "fix"
+  "containers"
+  "domainslib"
+  "zarith"
+  "progress"
+  "mlgmpidl"
   "odoc" {with-doc}
 ]
 build: [
