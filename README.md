@@ -175,7 +175,7 @@ let%test "my new test" =
   test (globalize t) p1 p2 && not @@ test t p1 p2
 ```
 
-The first line defines the term to test (in this case `λ (λ 1) 0`. The second
+The first line defines the term to test (in this case `λ (λ 1) 0`). The second
 line defines positions in the term, `[↓↘]` and `[↓↙↓]`. The third line prints
 info about the term and paths to stdout. The last line asserts that the hashes
 of the two positions are equal after globalization, but not before.
