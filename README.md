@@ -71,6 +71,18 @@ examples provided in the paper, among others. Furthermore, the software includes
 some implementations of other algorithms for comparison purposes. The algorithms
 can be benchmarked for empirical validation of the claims made in the paper.
 
+### List of claims
+
+1. This repository contains a reference implementation of the globalization
+   algorithms and its variants that are presented in the paper.
+2. The correctness of the algorithms is validated with several tests. (Some
+   tests are derived from examples in the paper.)
+3. Benchmarks on various types of randomly generated terms verify the claimed
+   O(n log n) runtime of the algorithms.
+4. We use the globalization algorithm to assign equivalence classes to sub-terms
+   modulo bisimilarity. Benchmarks show that this is competitive with Valmari's
+   DFA minimization algorithm.
+
 ### Code organization:
 
 The following source code files are important.
