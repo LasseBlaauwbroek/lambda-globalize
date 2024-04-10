@@ -45,8 +45,11 @@ eval $(opam env)
 
 Then, install the dependencies:
 ```bash
-opam install . --deps-only
+opam install . --deps-only --locked
 ```
+
+(You can choose to omit `--locked` to allow more recent packages to be
+installed, at the risk of breaking the build.)
 
 ### Basic Testing
 
