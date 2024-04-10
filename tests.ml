@@ -101,7 +101,7 @@ let hashers_with_modifiers : (string * (module HashWithSizeModifier)) list =
   List.map (fun (s, (module M : AbstractHash)) ->
       "GTermSizeModifier("^s^")", (module GTermSizeModifier(M) : HashWithSizeModifier)) hashers @
   [ "StringHashSizeModifier(GDigest)", (module StringHashSizeModifier(GDigest))
-  ; "IntHashSizeModifier(GTermConsed)", (module IntHashSizeModifier(GTermConsed)) ]
+  ; "IntHashSizeModifier(GTermConsed)", (module IntHashConsSizeModifier(GTermConsed)) ]
 
 module type T = sig end
 module type Alg = functor (H : AbstractLambda) -> Globalizer with type hash = H.hash
@@ -161,7 +161,7 @@ let%test "check minimization" =
     [ "ClosedZeroSizeModifier(GTermConsed)", (module ClosedZeroSizeModifier(GTermConsed))
     ; "LambdaSizeModifier(GTermConsed)", (module LambdaSizeModifier(GTermConsed))
     ; "GTermSizeModifier(GTermConsed)", (module GTermSizeModifier(GTermConsed))
-    ; "IntHashSizeModifier(GTermConsed)", (module IntHashSizeModifier(GTermConsed)) ] in
+    ; "IntHashConsSizeModifier(GTermConsed)", (module IntHashConsSizeModifier(GTermConsed)) ] in
   let minimizers : (string * (module Minimizer)) list =
     ("Valmari", (module Valmari)) ::
     List.concat_map (fun (a, (module A : Alg)) ->

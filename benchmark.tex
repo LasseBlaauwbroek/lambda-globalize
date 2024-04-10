@@ -3,6 +3,7 @@
 \pgfplotsset{compat=1.18}
 \usetikzlibrary{pgfplots.colorbrewer}
 \usepgfplotslibrary{groupplots}
+\usepackage{pgfplotstable}
 \begin{document}
 \begin{tikzpicture}
   \begin{groupplot}[
@@ -23,7 +24,7 @@
     xlabel={term size},
     ylabel={globalization time (s)},
     legend cell align={left},
-    xmax = 8192,
+    % xmax = 8192,
     ]
   % \begin{axis}[
   %   ymode=log,
@@ -41,7 +42,7 @@
   %   ]
     \nextgroupplot[
     ymode=log,
-    log basis y={2},
+    log basis y={10},
     ]
     \addlegendimage{white, mark=none}
     \addlegendentry{\underline{Algorithm}}
@@ -63,7 +64,6 @@
     \addplot+[domain=1:4096, dotted, black, mark = .] {0.00000006 * x * ln(x)/ln(2)} node[above] {$n\log n$};
     \addplot+[domain=1:4096, dotted, black, mark = .] {0.00000003 * x} node [above] {$n$};
 
-    \addplot+[Dark2-A, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_valmari.tsv};
     \node [draw,fill=white] at (rel axis cs: 0.21,0.82) {\shortstack[l]{
         \quad\quad \underline{Term type} \\
         \ref{plot:balanced} Balanced \\
@@ -72,10 +72,23 @@
 
     \nextgroupplot[
     ymode=log,
-    log basis y={2},
+    log basis y={10},
     ]
+
+    \pgfplotstableread[
+    col sep = tab,
+    ]{random_efficient.tsv}\efficientvalmari
+    \pgfplotstablecreatecol[
+    create col/copy column from table={random_valmari.tsv}{q2},
+    col sep = tab,
+    ]{vq2}{\efficientvalmari}
     \addplot+[Dark2-A, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_valmari.tsv};
     \addplot+[Dark2-B, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_efficient.tsv};
+    % \addplot+[Dark2-D, mark = o, mark size=0.5pt] table [x=x, y expr={(\thisrow{vq2} / \thisrow{q2})}] {\efficientvalmari};
+    % \addplot+[Dark2-E, mark = o, mark size=0.5pt] table [x=x, y expr={(\thisrow{mq2} / \thisrow{q2})}] {\efficientvalmari};
+    \addplot+[domain=1:524288, dotted, black, mark = .] {0.000000005 * x * (ln(x)/ln(2))^2} node[above] {$n\log^2 n$};
+    \addplot+[domain=1:524288, dotted, black, mark = .] {0.00000002 * x * ln(x)/ln(2)} node[above] {$n\log n$};
+    \addplot+[domain=1:524288, dotted, black, mark = .] {0.0000005 * x} node [above] {$n$};
   \end{groupplot}
 \end{tikzpicture}
 \end{document}

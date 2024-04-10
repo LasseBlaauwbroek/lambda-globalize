@@ -320,7 +320,18 @@ module GTermSizeModifier(H : AbstractHash) :
   let modify_size = decorate_size
   let gvar_size = modify_size
 end
-module IntHashSizeModifier(H : AbstractHash with type hash = hashcons_gterm) :
+module IntHashSizeModifier(H : AbstractHash with type hash = int) :
+  HashWithSizeModifier with type hash = H.hash = struct
+  include H
+  let modify_size h =
+    if decorated_closed h then
+      (* Truncate the hash to 32 bits *)
+      Int.logand (decorated_hash h) 4294967295
+    else
+      decorate_size h
+  let gvar_size = modify_size
+end
+module IntHashConsSizeModifier(H : AbstractHash with type hash = hashcons_gterm) :
   HashWithSizeModifier with type hash = H.hash = struct
   include H
   let modify_size h =

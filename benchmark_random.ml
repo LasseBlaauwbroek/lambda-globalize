@@ -7,14 +7,12 @@ module LambdaGTerm  = LambdaImplementation(LambdaSizeModifier(GTerm))
 let terms = ref ""
 let eff_file = ref ""
 let naive_file = ref ""
-let valmari_file = ref ""
 
 let _ =
   let speclist =
     [ "-in", Arg.Set_string terms, "pre-generated terms"
     ; "-o1", Arg.Set_string eff_file, "efficient globalize file"
-    ; "-o2", Arg.Set_string naive_file, "naive globalize file"
-    ; "-o3", Arg.Set_string valmari_file, "valmari minimize file"] in
+    ; "-o2", Arg.Set_string naive_file, "naive globalize file"] in
 Arg.parse speclist (fun _ -> ()) "cmd -size n"
 
 let bench from_pure globalize out =
@@ -37,5 +35,3 @@ module G1 = EfficientGlobalize1(LambdaGTerm)
 let () = bench G1.from_pure G1.globalize !eff_file
 module G2 = NaiveGlobalize(LambdaGTerm)
 let () = bench G2.from_pure G2.globalize !naive_file
-module V = Lambda_hash.Valmari
-let () = bench (fun x -> x) V.minimize !valmari_file
