@@ -103,7 +103,7 @@ The following source code files are important.
     3.1), `EfficientGlobalize1` (Section 3.2) and `EfficientGlobalize2`
     (Observation 3.16).
   + Modules for different hashing strategies: `GTerm`, `GDigest` (md5), `GInt`
-    (OCamls native hashing strategy), `GHashConsed` (a hashconsed variant of
+    (OCamls native hashing strategy), `GTermConsed` (a hashconsed variant of
     `GTerm`).
   + Several implementations of term summaries (Definition 3.7):
     `ClosedZeroSizeModifier`, `LambdaSizeModifier`, `GTermSizeModifier`,
