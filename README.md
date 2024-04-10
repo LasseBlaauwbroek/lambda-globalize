@@ -159,6 +159,27 @@ integer to each node. Two nodes receive the same integer if they are bisimilar.
 Note that algorithms do not have to agree on the integer they assign to an
 equivalence class.
 
+### Amending the tests
+
+To test the correctness of `globalize` w.r.t. to positions in a new lambda-term,
+you can follow the following template and add it to [tests.ml](tests.ml):
+
+```
+let%test "my new test" =
+  let t = from_pure (Lam (App (Lam (Var 1), Var 0))) in
+  let p1, p2 = [Down; Left; Down], [Down; Right] in
+  info t [p1; p2];
+  test (globalize t) p1 p2 && not @@ test t p1 p2
+```
+
+The first line defines the term to test (in this case `λ (λ 1) 0`. The second
+line defines positions in the term, `[↓↘]` and `[↓↙↓]`. The third line prints
+info about the term and paths to stdout. The last line asserts that the hashes
+of the two positions are equal after globalization, but not before.
+
+To add a test to the equivalence-class test, one can simply add another example
+to the `all_terms` constant in [tests.ml](tests.ml).
+
 ### Running benchmarks
 
 We include benchmarks that compare the running time of various algorithms on
