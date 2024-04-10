@@ -82,6 +82,9 @@ can be benchmarked for empirical validation of the claims made in the paper.
 4. We use the globalization algorithm to assign equivalence classes to sub-terms
    modulo bisimilarity. Benchmarks show that this is competitive with Valmari's
    DFA minimization algorithm.
+5. We implement Maziarz' hashing modulo (ordinary) alpha-equivalence algorithm,
+   and show through benchmarks that our (optimized) algorithms processing time is
+   competitive.
 
 ### Code organization:
 
