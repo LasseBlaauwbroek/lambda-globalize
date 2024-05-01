@@ -9,20 +9,21 @@
   \begin{groupplot}[
     group style={
       % set how the plots should be organized
-      group size=1 by 2,
+      group size=2 by 1,
       % only show ticklabels and axis labels on the bottom
-      x descriptions at=edge bottom,
+      y descriptions at=edge left,
       % set the `vertical sep' to zero
-      vertical sep=5pt,
+      horizontal sep=5pt,
     },
+    width=0.555\textwidth,
     xmode=log,
     log basis x={2},
     ymajorgrids,
     xmajorgrids,
     xmin=16,
-    legend pos = south east,
     xlabel={term size},
-    ylabel={globalization time (s)},
+    ylabel={processing time (s)},
+    legend pos = south east,
     legend cell align={left},
     % xmax = 8192,
     ]
@@ -73,22 +74,36 @@
     \nextgroupplot[
     ymode=log,
     log basis y={10},
+    legend pos = south east,
+    legend cell align={left},
     ]
+    \addlegendimage{white, mark=none}
+    \addlegendentry{\underline{Term type}}
+    \addlegendimage{black, dashed, mark=none}
+    \addlegendentry{Balanced}
+    \addlegendimage{black, mark=none}
+    \addlegendentry{Linear}
 
-    \pgfplotstableread[
-    col sep = tab,
-    ]{random_efficient.tsv}\efficientvalmari
-    \pgfplotstablecreatecol[
-    create col/copy column from table={random_valmari.tsv}{q2},
-    col sep = tab,
-    ]{vq2}{\efficientvalmari}
-    \addplot+[Dark2-A, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_valmari.tsv};
-    \addplot+[Dark2-B, mark = o, mark size=0.5pt] table [x=x, y=q2, col sep=tab] {random_efficient.tsv};
-    % \addplot+[Dark2-D, mark = o, mark size=0.5pt] table [x=x, y expr={(\thisrow{vq2} / \thisrow{q2})}] {\efficientvalmari};
-    % \addplot+[Dark2-E, mark = o, mark size=0.5pt] table [x=x, y expr={(\thisrow{mq2} / \thisrow{q2})}] {\efficientvalmari};
-    \addplot+[domain=1:524288, dotted, black, mark = .] {0.000000005 * x * (ln(x)/ln(2))^2} node[above] {$n\log^2 n$};
-    \addplot+[domain=1:524288, dotted, black, mark = .] {0.00000002 * x * ln(x)/ln(2)} node[above] {$n\log n$};
-    \addplot+[domain=1:524288, dotted, black, mark = .] {0.0000005 * x} node [above] {$n$};
+    \addplot+[Dark2-A, mark = o, mark size=0.5pt] table [x=x, y=oursint, col sep=tab] {compare_linear.tsv};
+    \label{plot:oursint}
+    \addplot+[Dark2-B, mark = o, mark size=0.5pt] table [x=x, y=ourscons, col sep=tab] {compare_linear.tsv};
+    \label{plot:ourscons}
+    \addplot+[Dark2-C, mark = o, mark size=0.5pt] table [x=x, y=mariarz, col sep=tab] {compare_linear.tsv};
+    \label{plot:mariarz}
+    \addplot+[Dark2-D, mark = o, mark size=0.5pt] table [x=x, y=valmari, col sep=tab] {compare_linear.tsv};
+    \label{plot:valmari}
+
+    \addplot+[Dark2-A, mark = o, mark size=0.5pt, dashed] table [x=x, y=oursint, col sep=tab] {compare_balanced.tsv};
+    \addplot+[Dark2-B, mark = o, mark size=0.5pt, dashed] table [x=x, y=ourscons, col sep=tab] {compare_balanced.tsv};
+    \addplot+[Dark2-C, mark = o, mark size=0.5pt, dashed] table [x=x, y=mariarz, col sep=tab] {compare_balanced.tsv};
+    \addplot+[Dark2-D, mark = o, mark size=0.5pt, dashed] table [x=x, y=valmari, col sep=tab] {compare_balanced.tsv};
+
+    \node [draw,fill=white] at (rel axis cs: 0.22,0.78) {\shortstack[l]{
+        \quad\quad \underline{Algorithm} \\
+        \ref{plot:oursint} Ours Hash \\
+        \ref{plot:ourscons} Ours Cons \\
+        \ref{plot:mariarz} Maziarz\\
+        \ref{plot:valmari} Valmari}};
   \end{groupplot}
 \end{tikzpicture}
 \end{document}

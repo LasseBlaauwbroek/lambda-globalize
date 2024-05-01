@@ -69,6 +69,7 @@
 (rule
  (targets benchmark.pdf benchmark.log benchmark.aux)
  (deps benchmark.tex
+       compare_balanced.tsv compare_linear.tsv
        linear_naive.tsv linear_efficient.tsv
        balanced_naive.tsv balanced_efficient.tsv
        random_naive.tsv random_efficient.tsv
