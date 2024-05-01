@@ -21,7 +21,7 @@ docker load -i lambda-hash-docker.tar
 
 To start an interactive session with the image run
 ```bash
-sudo docker run -it --rm lambda-hash:2.0
+sudo docker run -it --rm lambda-hash:5.0
 ```
 
 ### Option 2: Opam
