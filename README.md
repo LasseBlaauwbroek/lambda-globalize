@@ -45,8 +45,11 @@ eval $(opam env)
 
 Then, install the dependencies:
 ```bash
-opam install . --deps-only
+opam install . --deps-only --locked
 ```
+
+(You can choose to omit `--locked` to allow more recent packages to be
+installed, at the risk of breaking the build.)
 
 ### Basic Testing
 
@@ -71,6 +74,21 @@ examples provided in the paper, among others. Furthermore, the software includes
 some implementations of other algorithms for comparison purposes. The algorithms
 can be benchmarked for empirical validation of the claims made in the paper.
 
+### List of claims
+
+1. This repository contains a reference implementation of the globalization
+   algorithms and its variants that are presented in the paper.
+2. The correctness of the algorithms is validated with several tests. (Some
+   tests are derived from examples in the paper.)
+3. Benchmarks on various types of randomly generated terms verify the claimed
+   O(n log n) runtime of the algorithms.
+4. We use the globalization algorithm to assign equivalence classes to sub-terms
+   modulo bisimilarity. Benchmarks show that this is competitive with Valmari's
+   DFA minimization algorithm.
+5. We implement Maziarz' hashing modulo (ordinary) alpha-equivalence algorithm,
+   and show through benchmarks that our (optimized) algorithms processing time is
+   competitive.
+
 ### Code organization:
 
 The following source code files are important.
@@ -85,7 +103,7 @@ The following source code files are important.
     3.1), `EfficientGlobalize1` (Section 3.2) and `EfficientGlobalize2`
     (Observation 3.16).
   + Modules for different hashing strategies: `GTerm`, `GDigest` (md5), `GInt`
-    (OCamls native hashing strategy), `GHashConsed` (a hashconsed variant of
+    (OCamls native hashing strategy), `GTermConsed` (a hashconsed variant of
     `GTerm`).
   + Several implementations of term summaries (Definition 3.7):
     `ClosedZeroSizeModifier`, `LambdaSizeModifier`, `GTermSizeModifier`,
@@ -143,6 +161,27 @@ Here the algorithm processes the term `λ (λ 1) 0`. Each algorithm assigns an
 integer to each node. Two nodes receive the same integer if they are bisimilar.
 Note that algorithms do not have to agree on the integer they assign to an
 equivalence class.
+
+### Amending the tests
+
+To test the correctness of `globalize` w.r.t. to positions in a new lambda-term,
+you can follow the following template and add it to [tests.ml](tests.ml):
+
+```
+let%test "my new test" =
+  let t = from_pure (Lam (App (Lam (Var 1), Var 0))) in
+  let p1, p2 = [Down; Left; Down], [Down; Right] in
+  info t [p1; p2];
+  test (globalize t) p1 p2 && not @@ test t p1 p2
+```
+
+The first line defines the term to test (in this case `λ (λ 1) 0`). The second
+line defines positions in the term, `[↓↘]` and `[↓↙↓]`. The third line prints
+info about the term and paths to stdout. The last line asserts that the hashes
+of the two positions are equal after globalization, but not before.
+
+To add a test to the equivalence-class test, one can simply add another example
+to the `all_terms` constant in [tests.ml](tests.ml).
 
 ### Running benchmarks
 
